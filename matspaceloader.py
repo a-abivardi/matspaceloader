@@ -88,6 +88,7 @@ class MatSpaceLoader():
         if isinstance(cols, list):
             if not isinstance(cols[0], list):
                 cols = [cols]
+                
         elif isinstance(cols, int):
             cols = [[cols]]
 
@@ -309,7 +310,8 @@ class MatSpaceLoader():
                 if not isinstance(header, list) and not isinstance(header, np.ndarray):
                     header = [header]
         if cols is not None and header is not None:
-            header = header[cols]
+            if len(header) > 1:
+                header = header[cols]
 
         
         data, data_origshape = self._load_matrix(variable_name, cols=cols, rows=rows, return_origshape=return_origshape)
@@ -367,7 +369,6 @@ class MatSpaceLoader():
 
 
         for cnt, (var, head, col) in enumerate(zip(variable_names, headers, cols)):
-
 
             if cnt == 0:
                 df_main, origshape_main = self._make_dataframe(var, head, cols=col, rows=rows, 
