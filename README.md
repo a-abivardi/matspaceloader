@@ -13,12 +13,12 @@
 
 ### 3. Search for a Variable by Name or Code
 
-`pizza_column = thespace.search("Liking for pizza")`
+`pizza_column = thespace.search("Liking for pizza")`\
 `found varsVARS: 20698-0.0, varsHeader: Liking for pizza (0.0)`
 
 or
 
-`pizza_column = thespace.search(20698)`
+`pizza_column = thespace.search(20698)`\
 `found varsVARS: 20698-0.0, varsHeader: Liking for pizza (0.0)`
 
 
