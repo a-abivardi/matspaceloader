@@ -24,7 +24,7 @@ or
 
 ### 4. Quick Load a Variable from Workspace
 
-`vars = thespace.load('vars')  # load entire array`
+`vars = thespace.load('vars')  # load entire array`\
 `vars_subset = thespace.load('vars', cols=[1, 3], rows=[10, 20])`
 
 
