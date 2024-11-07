@@ -3,7 +3,6 @@
 
 ### 1. Initialize Loader
 
-
 `thespace = MatSpaceLoader('path/to/workspace.mat')`
 
 ### 2. List Variables in Workspace
@@ -31,9 +30,12 @@ or
 ### 5. Load Data into Pandas DataFrame (use this one)
 
 
-`df_pizza_coffee = thespace.load_pandas('vars', headers='varsHeader',cols=[thespace.search('Liking for pizza'), thespace.search('Liking for coffee')], sub_list='path/subjects.txt', return_index=True, store=True)`
+`df_pizza_coffee = thespace.load_pandas('vars', headers='varsHeader',cols=[thespace.search('Liking for pizza'), thespace.search('Liking for coffee')], sub_list='path/subjects.txt', store=True)`
 
+- store will store df in thespace.df
 
 ### 6. Load  DataFrame from multiple variables at once 
 
-`df_multi_variables = thespace.load_pandas(['birth_date', 'vars', 'IDPs'], headers=['_birth_date', 'varsHeader', 'IDP_names'], cols=[[0], thespace.search('Liking for pizza'), [3,4,6,20]])`
+`df_multi_variables = thespace.load_pandas(['birth_date', 'vars', 'IDPs'], headers=['_birth_date', 'varsHeader', 'IDP_names'], cols=[[0], thespace.search('Liking for pizza'), [3,4,6,20]], return_index=True)`
+
+- return_index will add the original row indexes for each variable as column (matlab and python convention separately)
