@@ -118,7 +118,7 @@ class MatSpaceLoader():
                 headers[header_index_pos] = headers[header_index_pos][header_index]
 
         #load sub list if provided
-        if sub_list:
+        if sub_list is not None:
             if isinstance(sub_list, str):
                 try:
                     sub_list = np.loadtxt(sub_list)
@@ -230,7 +230,17 @@ class MatSpaceLoader():
         except TypeError:
             pass
 
-        return vars_indexes, Svars_indexes
+        if vars_indexes and Svars_indexes:
+            return (vars_indexes, Svars_indexes), 'both'
+        
+        if vars_indexes:
+            return vars_indexes, 'vars'
+        
+        if Svars_indexes:
+            return Svars_indexes, 'Svars'
+        
+        else:
+            return None, 'nowhere'
 
 
     def _find_code(self, string_list, code):
@@ -380,7 +390,7 @@ class MatSpaceLoader():
 
                 df_main = self._add_subject_ids(df_main, origshape_main, rows=rows, subid_n=subid_n)
 
-                if sub_list:
+                if sub_list is not None:
                     df_main, python_index = self._df_sublister(df_main, sub_list)
                     df_main[f'{var}_index_python'] = python_index
                     df_main[f'{var}_index_matlab'] = python_index + 1
@@ -397,7 +407,7 @@ class MatSpaceLoader():
 
                 df_next = self._add_subject_ids(df_next, origshape, rows=rows)
                 
-                if sub_list:
+                if sub_list is not None:
                     df_next, python_index = self._df_sublister(df_next, sub_list)
                     df_next[f'{var}_index_python'] = python_index
                     df_next[f'{var}_index_matlab'] = python_index + 1
@@ -419,15 +429,27 @@ class MatSpaceLoader():
 
         try:
             if sub_list[0] > 20000000 and 'subject_IDs' in df:
-                df = df.loc[df['subject_IDs'].isin(sub_list)] 
-                return df, df.index
+                sub_list = pd.DataFrame(data=sub_list, columns=['subject_IDs'])
+                df = df.loc[df['subject_IDs'].isin(sub_list['subject_IDs'])]
+                df.loc[:, 'orig_index']=df.index
+                df = pd.merge(sub_list, df, on='subject_IDs', how='left')
+                orig_index = df['orig_index']
+                return df.drop(columns=['orig_index']), orig_index
             if sub_list[0] > 20000000 and 'subject_IDs' not in df:
                 sub_list = np.mod(sub_list, 10000000)
-                df = df.loc[df['subject_IDs_orig'].isin(sub_list)]
-                return df, df.index
+                sub_list = pd.DataFrame(data=sub_list, columns=['subject_IDs_orig'])
+                df = df.loc[df['subject_IDs_orig'].isin(sub_list['subject_IDs_orig'])]
+                df.loc[:, 'orig_index']=df.index
+                df = pd.merge(sub_list, df, on='subject_IDs_orig', how='left')
+                orig_index = df['orig_index']
+                return df.drop(columns=['orig_index']), orig_index
             if sub_list[0] < 10000000 and 'subject_IDs_orig' in df:
+                sub_list = pd.DataFrame(data=sub_list, columns=['subject_IDs_orig'])
                 df = df.loc[df['subject_IDs_orig'].isin(sub_list)]
-                return df, df.index
+                df.loc[:, 'orig_index']=df.index
+                df = pd.merge(sub_list, df, on='subject_IDs_orig', how='left')
+                orig_index = df['orig_index']; df.drop(columns=['orig_index'])
+                return df.drop(columns=['orig_index']), orig_index
         except Exception as e:
             print(f'unexpected error: {e}')
             raise
