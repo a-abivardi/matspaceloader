@@ -78,55 +78,10 @@ class MatSpaceLoader():
 
         """
 
-        # put single variable and header into list
-        if not isinstance(variable_names, list):
-            variable_names = [variable_names]
-
-            if headers and (not isinstance(headers, list) or (isinstance(headers, list) and len(headers) > 1)):
-                headers = [headers]
-
-        if isinstance(cols, list):
-            if not isinstance(cols[0], list):
-                cols = [cols]
-                
-        elif isinstance(cols, int):
-            cols = [[cols]]
-
-        # check variable contents
-        if isinstance(variable_names, list):
-            if any(self._checks(var) == 'string' for var in variable_names):
-                raise TypeError('at least one variable contains strings')
-
-        # header lists into arrays
-        if headers:
-            headers = [np.array(header) if isinstance(header, list) else header for header in headers]
-
-        # apply header index if requested
-        if header_index:
-            if isinstance(header_index, str):
-                header_index = self._load_matrix(header_index)
-
-            if len(headers) > 1:
-                if header_index_pos is None:
-                    raise ValueError('position of header to be indexed required for more than one header')
-            else:
-                header_index_pos = 0
-
-            if isinstance(headers[header_index_pos], str):
-                headers[header_index_pos] = self._load_strings(headers[header_index_pos])[header_index]
-            else:
-                headers[header_index_pos] = headers[header_index_pos][header_index]
-
-        #load sub list if provided
-        if sub_list is not None:
-            if isinstance(sub_list, str):
-                try:
-                    sub_list = np.loadtxt(sub_list)
-                except (OSError, ValueError) as e:
-                    raise ValueError(f"Failed to load subject list from '{sub_list}': {e}")
-                
-        if isinstance(rows, pd.core.series.Series):
-            rows = rows.to_numpy().tolist()
+        # lots of input checking
+        variable_names, headers, cols, rows, sub_list = self._process_load_pandas_inputs(variable_names, headers=headers, cols=cols, rows=rows, 
+                                                                                         header_index=header_index, header_index_pos=header_index_pos, 
+                                                                                         sub_list = sub_list)
 
         # create dataframe
         df = self._make_multiframe(variable_names, headers=headers, cols=cols, rows=rows, return_origshape=True,
@@ -203,11 +158,47 @@ class MatSpaceLoader():
         else:
             print('found nothing, try again')
             return None
+        
+    @staticmethod
+    def code_loader(codes_path):
+        """
+        A function to load UKBB codes from the first column of a textfile, as it would appear 
+        if you were to copy-paste the data-fields from the UKBB browser (e.g., from  https://biobank.ndph.ox.ac.uk/ukb/label.cgi?id=100060)
+        into it.
+
+        Codes are returned as a list of strings with '-' appended to them (subject to change)
+
+        Example input text:
+
+        Field ID    Description
+        20126	Bipolar and major depression status
+        20122	Bipolar disorder status
+        20127	Neuroticism score
+        20124	Probable recurrent major depression (moderate)
+        20125	Probable recurrent major depression (severe)
+        20123	Single episode of probable major depression  
+        """
+        codes = []
+        with open(codes_path, 'r') as file:
+            for line in file:
+                line_cols = line.split('\t')
+                if len(line_cols) < 2:
+                    continue
+                if ('(pilot)' in line_cols[1]) or ('Field' in line_cols[0]):
+                    continue
+                else:
+                    code = line_cols[0] + '-'
+                    codes.append(code)
+        return codes
+    
 
     def idxs_from_codes(self, codes):
 
         """ 
-        get list of UKBB column indexes by code for vars and Svars 
+        This gets column indexes for vars and Svars using list of UKBB codes (e.g., from code_loader).
+        
+        Returns: List of columns for vars or Svars with a location specifier ('vars', 'Svars'). 
+        if columns are found in both variables, a tuplev(vars_indexes, Svars_indexes) and location 'both' are returned.
         """
  
         self._load_headers()
@@ -241,6 +232,65 @@ class MatSpaceLoader():
         
         else:
             return None, 'nowhere'
+
+    def _process_load_pandas_inputs(self, variable_names, headers=None, cols=None, rows=None, header_index=None, header_index_pos=None, sub_list = None):
+
+        """
+        This checks inputs of load pandas and puts into lists where needed. Probably still incomplete.
+        """
+
+        # put single variable and header into list
+        if not isinstance(variable_names, list):
+            variable_names = [variable_names]
+
+            if headers and (not isinstance(headers, list) or (isinstance(headers, list) and len(headers) > 1)):
+                headers = [headers]
+
+        
+        if isinstance(cols, list):
+            if not isinstance(cols[0], list):
+                cols = [cols]
+                
+        elif isinstance(cols, int):
+            cols = [[cols]]
+
+
+        # header lists into arrays
+        if headers:
+            headers = [np.array(header) if isinstance(header, list) else header for header in headers]
+
+        # apply header index if requested
+        if header_index:
+            if isinstance(header_index, str):
+                header_index = self._load_matrix(header_index)
+
+            if len(headers) > 1:
+                if header_index_pos is None:
+                    raise ValueError('position of header to be indexed required for more than one header')
+            else:
+                header_index_pos = 0
+
+            if isinstance(headers[header_index_pos], str):
+                headers[header_index_pos] = self._load_strings(headers[header_index_pos])[header_index]
+            else:
+                headers[header_index_pos] = headers[header_index_pos][header_index]
+
+        #load sub list if provided
+        if sub_list is not None:
+            if isinstance(sub_list, str):
+                try:
+                    sub_list = np.loadtxt(sub_list)
+                except (OSError, ValueError) as e:
+                    raise ValueError(f"Failed to load subject list from '{sub_list}': {e}")
+                
+        if isinstance(rows, pd.core.series.Series):
+            rows = rows.to_numpy().tolist()
+    
+        # check variable contents (subject to removal or change to warning)
+        if any(self._checks(var) == 'string' for var in variable_names):
+            raise TypeError('at least one variable contains strings only, please use numerical data')
+
+        return variable_names, headers, cols, rows, sub_list
 
 
     def _find_code(self, string_list, code):
@@ -427,32 +477,51 @@ class MatSpaceLoader():
 
     def _df_sublister(self, df, sub_list):
 
-        try:
-            if sub_list[0] > 20000000 and 'subject_IDs' in df:
-                sub_list = pd.DataFrame(data=sub_list, columns=['subject_IDs'])
-                df = df.loc[df['subject_IDs'].isin(sub_list['subject_IDs'])]
-                df.loc[:, 'orig_index']=df.index
-                df = pd.merge(sub_list, df, on='subject_IDs', how='left')
-                orig_index = df['orig_index']
-                return df.drop(columns=['orig_index']), orig_index
-            if sub_list[0] > 20000000 and 'subject_IDs' not in df:
+        """
+        Given a sub_list and a dataframe, this returns the dataframe for the subjects in the order of the sub_list.
+        For details see _df_sublister_core function below
+        """
+
+ 
+        if sub_list[0] > 20000000:
+            
+            if 'subject_IDs' in df:
+
+                df_with_subs, orig_index = self._df_sublister_core(df, sub_list, 'subject_IDs')
+        
+            elif 'subject_IDs' not in df:
                 sub_list = np.mod(sub_list, 10000000)
-                sub_list = pd.DataFrame(data=sub_list, columns=['subject_IDs_orig'])
-                df = df.loc[df['subject_IDs_orig'].isin(sub_list['subject_IDs_orig'])]
-                df.loc[:, 'orig_index']=df.index
-                df = pd.merge(sub_list, df, on='subject_IDs_orig', how='left')
-                orig_index = df['orig_index']
-                return df.drop(columns=['orig_index']), orig_index
-            if sub_list[0] < 10000000 and 'subject_IDs_orig' in df:
-                sub_list = pd.DataFrame(data=sub_list, columns=['subject_IDs_orig'])
-                df = df.loc[df['subject_IDs_orig'].isin(sub_list)]
-                df.loc[:, 'orig_index']=df.index
-                df = pd.merge(sub_list, df, on='subject_IDs_orig', how='left')
-                orig_index = df['orig_index']; df.drop(columns=['orig_index'])
-                return df.drop(columns=['orig_index']), orig_index
-        except Exception as e:
-            print(f'unexpected error: {e}')
-            raise
+                df_with_subs, orig_index = self._df_sublister_core(df, sub_list, 'subject_IDs_orig')
+        
+        elif sub_list[0] < 10000000 and 'subject_IDs_orig' in df:
+            df_with_subs, orig_index = self._df_sublister_core(df, sub_list, 'subject_IDs_orig')
+        
+        else:
+            raise RuntimeError('Something is wrong with the sublisting')
+
+
+        return df_with_subs, orig_index
+    
+
+    def _df_sublister_core(self, df, sub_list, sub_col):
+
+        """
+        Actual sublisting is done here.
+        """
+
+        # put sub_list into dataframe
+        sub_list = pd.DataFrame(data=sub_list, columns=[sub_col])
+
+        # extract subjects contained in sub_list from input dataframe
+        df = df.loc[df[sub_col].isin(sub_list[sub_col])]
+
+        # store original index of these subjects
+        df.loc[:, 'orig_index']=df.index
+
+        # merge input dataframe on sub_list dataframe to ensure same ordering as in the input list
+        df = pd.merge(sub_list, df, on=sub_col, how='left')
+
+        return df.drop(columns=['orig_index']), df['orig_index']
 
 
     def _slice_matrix(self, data, rows, cols):
@@ -498,15 +567,33 @@ class MatSpaceLoader():
             return df
         return pd.concat((sub_df, df), axis=1)
     
+
     @staticmethod
     def code_loader(codes_path):
+        """
+        A function to load UKBB codes from the first column of a textfile, as it would appear 
+        if you were to copy-paste the data-fields from the UKBB browser (e.g., from  https://biobank.ndph.ox.ac.uk/ukb/label.cgi?id=100060)
+        into it.
+
+        Codes are returned as a list of strings with '-' appended to (subject to change)
+
+        Example txt:
+
+        Field ID    Description
+        20126	Bipolar and major depression status
+        20122	Bipolar disorder status
+        20127	Neuroticism score
+        20124	Probable recurrent major depression (moderate)
+        20125	Probable recurrent major depression (severe)
+        20123	Single episode of probable major depression  
+        """
         codes = []
         with open(codes_path, 'r') as file:
             for line in file:
                 line_cols = line.split('\t')
                 if len(line_cols) < 2:
                     continue
-                if '(pilot)' in line_cols[1]:
+                if ('(pilot)' in line_cols[1]) or ('Field' in line_cols[0]):
                     continue
                 else:
                     code = line_cols[0] + '-'
@@ -515,15 +602,4 @@ class MatSpaceLoader():
     
 
 if __name__ == '__main__':
-    # example use
-    workspace_path = 'example_path/workspace_13.mat'
-    getit = MatSpaceLoader(workspace_path)
-
-    # find out what's in the workspace
-    getit.get_varnames()
-
-    # quick load of varsVARS
-    varsVARS = getit.load('varsVARS')
-
-    # load IDPs w
-    conf_simple_df = getit.load_pandas('conf_simple')
+    pass
