@@ -251,7 +251,7 @@ class MatSpaceLoader():
             the_columns = ['subject_IDs','index_python', 'index_matlab']
             the_columns_loc = self.columns.str.contains('|'.join(the_columns))
             self.attrs['the_columns'] = self.loc[:, the_columns_loc]
-            self.drop(columns=self.columns[self.columns.str.contains('|'.join(the_columns))], inplace=True)
+            self.drop(columns=self.columns[the_columns_loc], inplace=True)
             self.cleaned = True 
  
         def reassemble(self):
