@@ -70,11 +70,15 @@ class MatSpaceLoader():
 
 
         Returns:
-            pd.DataFrame: the requested dataframe with subject IDs, when possible. multi-variable frames only available for subject ID compatible 
+            pd.DataFrame with custom functions: the requested dataframe with subject IDs, when possible. multi-variable frames only available for subject ID compatible 
             variables. when variables with mixed subject indexes are used (i.e., imaging session index 'subject_IDs' + original 'subject_IDs_orig/_unique'), 
             the original index data will be duplicated in cases of double entries for a subject (i.e., both imaging sessions available). in multiframe
             mode the length of the variable_names list must match cols/rows lists and headers list, when provided.
             (Workspace indexes (using python convention) are added when returning a subset of subject rows.)
+
+            Custom functions:
+                DataFrame.clean(): removes all indexes and subject_ids from DataFrame but keeps them in a safe location
+                DataFrame.reassemble(): reinserts all indexes and subject_ids  
 
         """
 
@@ -232,6 +236,33 @@ class MatSpaceLoader():
         
         else:
             return None, 'nowhere'
+        
+    class CustomPandas(pd.DataFrame):
+        """
+        custom functionlity for pandas dataframe.
+        clean(): removes IDs and index columns from dataframe but keeps them safe
+        reassemble(): puts everything back together (albeit not exactly in the same order)
+        """
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.cleaned = False 
+  
+        def clean(self):
+            the_columns = ['subject_IDs','python_index', 'matlab_index']
+            the_columns_loc = self.columns.str.contains('|'.join(the_columns))
+            self.attrs['the_columns'] = self.loc[:, the_columns_loc]
+            self.drop(columns=self.columns[self.columns.str.contains('|'.join(the_columns))], inplace=True)
+            self.cleaned = True 
+ 
+        def reassemble(self):
+            if self.cleaned:
+                for i, col in enumerate(self.attrs['the_columns'].columns):
+                    self.insert(loc=i, column=col, value=self.attrs['the_columns'][col])
+                self.cleaned = False
+                print('dataframe reassembled. Caution: IDs and indexes have been reinserted at start of dataframe not in original location.')
+            else:
+                print('nothing to reassemble')
+        
 
     def _process_load_pandas_inputs(self, variable_names, headers=None, cols=None, rows=None, header_index=None, header_index_pos=None, sub_list = None):
 
@@ -473,7 +504,7 @@ class MatSpaceLoader():
         if 'subject_IDs' in df_main:
             df_main['subject_IDs'] = df_main['subject_IDs'].astype('int')
 
-        return df_main
+        return self.CustomPandas(df_main)
 
     def _df_sublister(self, df, sub_list):
 
