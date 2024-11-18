@@ -90,6 +90,9 @@ class MatSpaceLoader():
         # create dataframe
         df = self._make_multiframe(variable_names, headers=headers, cols=cols, rows=rows, return_origshape=True,
                         subid_n = subid_n, return_index=return_index, sub_list = sub_list)
+        
+        # put subject ids and indexes at the start of the df
+        df.clean().reassemble()
 
         if store:
             self.df = df
@@ -251,7 +254,7 @@ class MatSpaceLoader():
             the_columns = ['subject_IDs','index_python', 'index_matlab']
             the_columns_loc = self.columns.str.contains('|'.join(the_columns))
             self.attrs['the_columns'] = self.loc[:, the_columns_loc]
-            self.drop(columns=self.columns[the_columns_loc], inplace=True)
+            self.drop(columns=self.columns[self.columns.str.contains('|'.join(the_columns))], inplace=True)
             self.cleaned = True 
  
         def reassemble(self):
@@ -259,7 +262,7 @@ class MatSpaceLoader():
                 for i, col in enumerate(self.attrs['the_columns'].columns):
                     self.insert(loc=i, column=col, value=self.attrs['the_columns'][col])
                 self.cleaned = False
-                print('dataframe reassembled. Caution: IDs and indexes have been reinserted at start of dataframe not in original location.')
+                print('dataframe reassembled.')
             else:
                 print('nothing to reassemble')
         
@@ -267,24 +270,33 @@ class MatSpaceLoader():
     def _process_load_pandas_inputs(self, variable_names, headers=None, cols=None, rows=None, header_index=None, header_index_pos=None, sub_list = None):
 
         """
-        This checks inputs of load pandas and puts into lists where needed. Probably still incomplete.
+        This checks inputs of load pandas and puts into lists where needed. 
+        Messy and probably doesn't work in all cases.
         """
 
         # put single variable and header into list
-        if not isinstance(variable_names, list):
+        if isinstance(variable_names, str):
             variable_names = [variable_names]
 
             if headers and (not isinstance(headers, list) or (isinstance(headers, list) and len(headers) > 1)):
                 headers = [headers]
-
         
+        if isinstance(cols, np.ndarray):
+            cols = cols.tolist()
+
         if isinstance(cols, list):
-            if not isinstance(cols[0], list):
+            if isinstance(cols[0], int):
                 cols = [cols]
                 
         elif isinstance(cols, int):
             cols = [[cols]]
 
+        else:
+            raise TypeError('cols can be either a list of integers, a numpy array, or a single integer')
+
+        if len(variable_names)==1:
+            if len(cols)>1:
+                cols = [list(chain.from_iterable(cols))]
 
         # header lists into arrays
         if headers:
