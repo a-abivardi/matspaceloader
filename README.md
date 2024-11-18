@@ -56,7 +56,7 @@ This works for variables, which match the length of either 'subject_IDs' (=sessi
 
 
 ### Dependencies:
-- h5py, pandas and numpy
+- h5py (https://docs.h5py.org/en/latest/build.html), pandas and numpy
 
 ### for further documentation see code / docstrings
 
