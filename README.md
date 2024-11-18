@@ -38,7 +38,7 @@ or
 
 ### 6. Load DataFrame from multiple variables at once
 
-This works for variables, which match the length of either 'subject_IDs' (=session) or 'subject_IDs_unique'. In case of mixed session and unique data, the unique data will be duplicated for subjects with 2 available sessions.
+This works for variables, which match the length of either 'subject_IDs' (=session) or 'subject_IDs_unique'. In cases of mixed session and unique data, the unique data will be duplicated for subjects with 2 available sessions.
 
 `df_multi_variables = space.load_pandas(['birth_date', 'vars', 'IDPs'], headers=['_birth_date', 'varsHeader', 'IDP_names'], cols=[[0], space.search('Liking for pizza'), [3,4,6,20]], return_index=True)`
 
@@ -54,6 +54,9 @@ This works for variables, which match the length of either 'subject_IDs' (=sessi
 
 `df.reassemble() # reinserts the columns`
 
+
+### Dependencies:
+- h5py, pandas and numpy
 
 ### for further documentation see code / docstrings
 
