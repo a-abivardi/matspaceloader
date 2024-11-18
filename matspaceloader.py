@@ -255,7 +255,8 @@ class MatSpaceLoader():
             the_columns_loc = self.columns.str.contains('|'.join(the_columns))
             self.attrs['the_columns'] = self.loc[:, the_columns_loc]
             self.drop(columns=self.columns[self.columns.str.contains('|'.join(the_columns))], inplace=True)
-            self.cleaned = True 
+            self.cleaned = True
+            return self
  
         def reassemble(self):
             if self.cleaned:
@@ -265,6 +266,7 @@ class MatSpaceLoader():
                 print('dataframe reassembled.')
             else:
                 print('nothing to reassemble')
+            return self
         
 
     def _process_load_pandas_inputs(self, variable_names, headers=None, cols=None, rows=None, header_index=None, header_index_pos=None, sub_list = None):
