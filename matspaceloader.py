@@ -281,20 +281,23 @@ class MatSpaceLoader():
             if headers and (not isinstance(headers, list) or (isinstance(headers, list) and len(headers) > 1)):
                 headers = [headers]
         
-        if isinstance(cols, np.ndarray):
-            cols = cols.tolist()
-
-        if isinstance(cols, list):
-            if isinstance(cols[0], int):
-                cols = [cols]
-                
-        elif isinstance(cols, int):
-            cols = [[cols]]
-
+        if cols is None:
+            pass
         else:
-            raise TypeError('cols can be either a list of integers, a numpy array, or a single integer')
+            if isinstance(cols, np.ndarray):
+                cols = cols.tolist()
 
-        if len(variable_names)==1:
+            if isinstance(cols, list):
+                if isinstance(cols[0], int):
+                    cols = [cols]
+                    
+            elif isinstance(cols, int):
+                cols = [[cols]]
+
+            else:
+                raise TypeError('cols can be either a list of integers, a numpy array, or a single integer')
+
+        if len(variable_names)==1 and cols is not None:
             if len(cols)>1:
                 cols = [list(chain.from_iterable(cols))]
 
