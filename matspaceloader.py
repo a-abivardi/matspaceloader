@@ -648,6 +648,56 @@ class MatSpaceLoader():
                     codes.append(code)
         return codes
     
+    def get_age_sex_matches(self, subs_df, multiples = 1):
+
+        # load age and sex matrix
+
+        age_sex = self.load_pandas(['age1','sex12'], headers=['_age1','_sex12'], store=False)
+        
+        age_sex_subs = pd.merge(subs_df, age_sex, on='subject_IDs_orig', how='left')
+        age_sex_potentialmatches = age_sex[~age_sex['subject_IDs_orig'].isin(subs_df['subject_IDs_orig'])]
+
+        # get females/males
+        age_sex_potentialmatches_0 = age_sex_potentialmatches.loc[age_sex_potentialmatches['sex12']==0].reset_index(drop=True)
+        age_sex_potentialmatches_1 = age_sex_potentialmatches.loc[age_sex_potentialmatches['sex12']==1].reset_index(drop=True)
+
+        # get matches
+        matches = []
+
+        for _, sub in age_sex_subs.iterrows():
+            if sub['sex12']==0:
+                for i in range(multiples):
+                    closest_age_idx = (np.abs(age_sex_potentialmatches_0['age1'] - sub['age1'])).argmin()
+                    matches.append(age_sex_potentialmatches_0.iloc[closest_age_idx]['subject_IDs_orig'])
+                    age_sex_potentialmatches_0 = age_sex_potentialmatches_0.drop(closest_age_idx).reset_index(drop=True)
+            if sub['sex12']==1:
+                for i in range(multiples):
+                    closest_age_idx = (np.abs(age_sex_potentialmatches_1['age1'] - sub['age1'])).argmin()
+                    matches.append(age_sex_potentialmatches_1.iloc[closest_age_idx]['subject_IDs_orig'])
+                    age_sex_potentialmatches_1 = age_sex_potentialmatches_1.drop(closest_age_idx).reset_index(drop=True)
+
+
+
+        df_matches = age_sex.loc[age_sex['subject_IDs_orig'].isin(matches)]
+
+        assert df_matches.shape[0]==df_matches['subject_IDs_orig'].unique().shape[0], 'there are duplicates'
+        assert age_sex_subs['subject_IDs_orig'].isin(df_matches['subject_IDs_orig']).any(), 'there are subs in matches'
+
+        return age_sex_subs, df_matches
+
+
+        
+            
+
+
+
+
+
+        
+
+
+
+    
 
 if __name__ == '__main__':
     pass
