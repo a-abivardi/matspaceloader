@@ -118,6 +118,10 @@ class MatSpaceLoader():
             if not isinstance(search_infer, str) and not isinstance(search_string, str) and not isinstance(search_code, str):
                 raise ValueError('please provide ICD-code as string')
             else:
+                if search_infer is not None:
+                    search_string = search_infer
+                if search_string is None and search_code is not None:
+                    search_string = search_code
                 search_string = 'Diagnoses - ICD10 (' + search_string
                 search_code = None
 
@@ -661,7 +665,7 @@ class MatSpaceLoader():
         # load age and sex matrix
 
         age_sex = self.load_pandas(['age1','sex12'], headers=['_age1','_sex12'], store=False)
-        
+
         age_sex_subs = pd.merge(subs_df, age_sex, on='subject_IDs_orig', how='left')
         age_sex_potentialmatches = age_sex[~age_sex['subject_IDs_orig'].isin(subs_df['subject_IDs_orig'])]
 
@@ -685,25 +689,12 @@ class MatSpaceLoader():
                     age_sex_potentialmatches_1 = age_sex_potentialmatches_1.drop(closest_age_idx).reset_index(drop=True)
 
 
-
         df_matches = age_sex.loc[age_sex['subject_IDs_orig'].isin(matches)]
 
         assert df_matches.shape[0]==df_matches['subject_IDs_orig'].unique().shape[0], 'there are duplicates'
-        assert age_sex_subs['subject_IDs_orig'].isin(df_matches['subject_IDs_orig']).any(), 'there are subs in matches'
+        assert not age_sex_subs['subject_IDs_orig'].isin(df_matches['subject_IDs_orig']).any(), 'there are subs in matches'
 
         return age_sex_subs, df_matches
-
-
-        
-            
-
-
-
-
-
-        
-
-
 
     
 
