@@ -108,11 +108,19 @@ class MatSpaceLoader():
             variable_names = [name for name in f.keys() if name not in ['I', '#refs#', 'ans']]
         return variable_names
     
-    def search(self, search_infer = None, search_code=None, search_string=None):        
+    def search(self, search_infer = None, search_code=None, search_string=None, ICD=False):        
         
         """ 
         Search for UKBB column indexes by code or name in vars and Svars 
         """
+
+        if ICD:
+            if not isinstance(search_infer, str) and not isinstance(search_string, str) and not isinstance(search_code, str):
+                raise ValueError('please provide ICD-code as string')
+            else:
+                search_string = 'Diagnoses - ICD10 (' + search_string
+                search_code = None
+
 
         if search_infer and (search_code is None) and (search_string is None):
             if isinstance(search_infer, int):
